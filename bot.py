@@ -1,27 +1,63 @@
 from ephem import *
 import logging
 import re
+import random
 from setting import API_KEY
-from cities import cities_list
-from user_data import user_data
+from week2.cities import cities_list
+
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s',
+logging.basicConfig(format='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
+                    datefmt='%d/%m/%Y %H:%M:%S',
                     level=logging.INFO,
                     filename='bot.log'
                     )
+user_data = {}  # {'username': ['city1', 'city2']} ключ — %username%; значение — список использованных названий городов в рамках раунда с конкретным пользователем
 
 
 def cities(bot, update):
-    # print(update)
-    # print(update.message.from_user.username)
-    if update.message.from_user.username not in user_data:
-        user_data[update.message.from_user.username] = []
-        user_data[update.message.from_user.username].append(update.message.text[8:])
-        print(user_data)
+
+    user = update.message.from_user.username  # выхватываем %username% из сообщения
+    city = update.message.text[8:]  # выхватываем всё, кроме комманды
+    last_letter = city[-1]  # объявляем последнюю букву из названия города, на которую мы будем отвечать
+
+    if city not in cities_list:  # проверка, если названия города пользователя нет в списке городов
+        update.message.reply_text('Не знаю такого города. Давай другой.')
     else:
-        user_data[update.message.from_user.username].append(update.message.text[8:])
-        print(user_data)
+        if last_letter in 'ыъйь':  # если название города заканчивается на одну из указанных букв, то берём предпоследнюю
+            last_letter = city[-2]
+
+        if user not in user_data or len(user_data[user]) == 0:  # если пользователя нет в словаре
+            user_data[user] = []   # инициализация пустого списка для ключа %username%
+            user_data[user].append(city)  # добавляем в список название города, которое прислал юзер
+            bot_city = random.choice([i for i in cities_list if i.startswith(last_letter) and i not in user_data[user]])  # составляем список названий городов, которые начинаются на нужную букву и не были использованы. Выбираем рандомное название города
+            update.message.reply_text(bot_city)  # отвечаем рандомным названием
+            user_data[user].append(bot_city)  # добавляем рандомное название в список использованных для этого юзера
+        else:
+            if len(cities_list) == len(user_data[user]):  # если длина списка использованных названий городов равна длине известных городов, то прекращаем игру
+                update.message.reply_text('Известные мне города закончились. Обнуляем список городов.')
+                user_data[user] = []  # обнуляем список использованных названий городов
+            elif len([i for i in cities_list if i.startswith(last_letter) and i not in user_data[user]]) == 1:  # если закончился список известных городов на определённую букву, то также прекращаем игру
+                random.choice([i for i in cities_list if i.startswith(last_letter) and i not in user_data[user]])  # отсылаем последнее название города
+                update.message.reply_text('Использовано последнее слово на эту букву, которое я знаю. Начинаем сначала')
+                user_data[user] = []  # обнуляем список
+            else:
+                start_letter = user_data[user][-1][-1]  # объявляем букву, на которую должен ответить пользователь
+                if start_letter in 'ыъйь':  # если название города заканчивается на одну из указанных букв, то берём предпоследнюю
+                    start_letter = user_data[user][-1][-2]
+
+                if start_letter != city[0]:  # если название города пользователя начинается не с той буквы, ругаем его
+                    update.message.reply_text('Схитрить решил? Отвечай честно!')
+                else:
+                    if city in user_data[user]:  # если название города уже было использовано, ругаем пользователя
+                        update.message.reply_text('Схитрить решил? Отвечай честно!')
+                    else:
+                        user_data[user].append(city)  # добавляем название города в список использованных в этой сессии юзера
+                        bot_city = random.choice([i for i in cities_list if i.startswith(last_letter) and i not in user_data[user]])  # выбираем рандомный город, который начинается с последней буквы
+                        update.message.reply_text(bot_city)  # отвечаем городом
+                        user_data[user].append(bot_city)  # добавляем город в список
+                        print(user_data[user])
+
 
 def word_counter(bot, update):
     update.message.reply_text(len(re.findall(r'[a-zA-Z0-9а-яА-Я]+', update.message.text)) - 1)
