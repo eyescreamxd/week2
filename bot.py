@@ -59,6 +59,26 @@ def cities(bot, update):
                         print(user_data[user])
 
 
+def calc(update, context):
+    user = update.message.from_user.username
+    try:
+        user_text = str(update.message.text).split()[-1]
+        if ',' in user_text:
+            user_text = user_text.replace(',', '.')
+
+        if re.findall('(\d+).+?(\d+)', user_text):
+            update.message.reply_text(f"Ответ: {eval(user_text)}")
+        else:
+            update.message.reply_text(f"Что-то ты мне прислал ерунду какую-то.\n"
+                                      f"Пиши /calc и пример, который должен решить, а не вот это вот все.\n")
+    except TypeError:
+        update.message.reply_text(f"Не понимаю как это решить. Попробуй написать пример по-другому.")
+    except ZeroDivisionError:
+        update.message.reply_text(f"Себя на 0 подели. Школьную математику забыл?")
+    except SyntaxError:
+        update.message.reply_text(f"У тебя в примере, это... Ошибка есть. Давай по новой, {user}.")
+
+
 def word_counter(bot, update):
     update.message.reply_text(len(re.findall(r'[a-zA-Z0-9а-яА-Я]+', update.message.text)) - 1)
 
@@ -109,6 +129,7 @@ def main():
     dp.add_handler(CommandHandler("wordcount", word_counter))
     dp.add_handler(CommandHandler("next_full_moon", tg_next_full_moon))
     dp.add_handler(CommandHandler("cities", cities))
+    dp.add_handler(CommandHandler("calc", calc))
     dp.add_handler(MessageHandler(Filters.text, talk_to_me))
 
     mybot.start_polling()
