@@ -59,7 +59,7 @@ def cities(bot, update):
                         print(user_data[user])
 
 
-def calc(update, context):
+def calc(bot, update):
     user = update.message.from_user.username
     try:
         user_text = str(update.message.text).split()[-1]
