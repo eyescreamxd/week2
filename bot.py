@@ -18,7 +18,7 @@ user_data = {}  # {'username': ['city1', 'city2']} ключ — %username%; зн
 def cities(bot, update):
 
     user = update.message.from_user.username  # выхватываем %username% из сообщения
-    city = update.message.text[8:]  # выхватываем всё, кроме комманды
+    city = update.message.text[8:].lower()  # выхватываем всё, кроме комманды
     last_letter = city[-1]  # объявляем последнюю букву из названия города, на которую мы будем отвечать
 
     if city not in cities_list:  # проверка, если названия города пользователя нет в списке городов
